@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import "./App.css";
 
 function App() {
+  const [units, setUnits] = useState([{ id: 1, rent: "2000" }]);
+
   const [formData, setFormData] = useState({
     // Purchase Details
     cprice: "300000",
@@ -64,12 +66,41 @@ function App() {
     setFormData(newFormData);
   };
 
+  const addUnit = () => {
+    const newId = Math.max(...units.map((u) => u.id), 0) + 1;
+    setUnits([...units, { id: newId, rent: "0" }]);
+  };
+
+  const removeUnit = (id) => {
+    if (units.length > 1) {
+      setUnits(units.filter((unit) => unit.id !== id));
+    }
+  };
+
+  const updateUnitRent = (id, rent) => {
+    setUnits(units.map((unit) => (unit.id === id ? { ...unit, rent } : unit)));
+  };
+
+  const calculateTotalRent = () => {
+    return units.reduce(
+      (total, unit) => total + (parseFloat(unit.rent) || 0),
+      0
+    );
+  };
+
   const buildCalculatorURL = () => {
     const baseURL =
       "https://www.calculator.net/rental-property-calculator.html";
     const params = new URLSearchParams();
 
-    Object.entries(formData).forEach(([key, value]) => {
+    // Use calculated total rent instead of formData.crent
+    const totalRent = calculateTotalRent();
+    const dataWithTotalRent = {
+      ...formData,
+      crent: totalRent.toString(),
+    };
+
+    Object.entries(dataWithTotalRent).forEach(([key, value]) => {
       if (value !== "") {
         params.append(key, value);
       }
@@ -215,12 +246,6 @@ function App() {
       title: "Income",
       fields: [
         {
-          name: "crent",
-          label: "Monthly Rent ($)",
-          type: "number",
-          placeholder: "2000",
-        },
-        {
           name: "crentincrease",
           label: "Rent Increase (%)",
           type: "number",
@@ -255,6 +280,7 @@ function App() {
           placeholder: "0",
         },
       ],
+      hasSubsection: true,
     },
     {
       title: "Selling",
@@ -298,6 +324,78 @@ function App() {
           {inputGroups.map((group, groupIndex) => (
             <div key={groupIndex} className="input-group">
               <h2 className="group-title">{group.title}</h2>
+
+              {/* Unit-based Rent Subsection for Income - at top */}
+              {group.hasSubsection && group.title === "Income" && (
+                <div className="subsection">
+                  <h3 className="subsection-title">Monthly Rent by Unit</h3>
+                  <div className="units-section">
+                    <div className="units-header">
+                      <span>
+                        Total Monthly Rent:{" "}
+                        <strong>
+                          ${calculateTotalRent().toLocaleString()}
+                        </strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={addUnit}
+                        className="add-unit-button"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M12 5v14M5 12h14" />
+                        </svg>
+                        Add Unit
+                      </button>
+                    </div>
+                    <div className="units-list">
+                      {units.map((unit, index) => (
+                        <div key={unit.id} className="unit-row">
+                          <label className="unit-label">Unit {index + 1}</label>
+                          <div className="unit-input-group">
+                            <span className="dollar-sign">$</span>
+                            <input
+                              type="number"
+                              value={unit.rent}
+                              onChange={(e) =>
+                                updateUnitRent(unit.id, e.target.value)
+                              }
+                              placeholder="0"
+                              className="unit-rent-input"
+                            />
+                          </div>
+                          {units.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeUnit(unit.id)}
+                              className="remove-unit-button"
+                            >
+                              <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <path d="M18 6L6 18M6 6l12 12" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="fields-grid">
                 {group.fields.map((field) => {
                   // Check if field should be shown based on conditional logic
